@@ -1,0 +1,13 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.6",
+  "Category": "Rust POC",
+  "Description": "Unreal renderer for the shared Rust engine state.",
+  "Plugins": [
+    {
+      "Name": "RustEngine",
+      "Enabled": true
+    }
+  ]
+}
+

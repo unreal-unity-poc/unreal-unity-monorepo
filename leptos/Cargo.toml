@@ -1,0 +1,12 @@
+[package]
+name = "rust-leptos-renderer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+console_error_panic_hook = "0.1"
+gloo-timers = "0.3"
+leptos = { version = "0.8", features = ["csr"] }
+rust-engine = { path = "../rust-engine" }
+

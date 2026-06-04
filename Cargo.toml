@@ -1,0 +1,4 @@
+[workspace]
+members = ["rust-engine"]
+exclude = ["dioxus", "leptos", "tauri/src-tauri", "wasm"]
+resolver = "2"

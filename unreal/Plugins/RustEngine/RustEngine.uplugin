@@ -1,0 +1,16 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "Rust Engine Renderer",
+  "Description": "Renders the shared Rust engine state in Unreal.",
+  "Category": "Rendering",
+  "Modules": [
+    {
+      "Name": "RustEngine",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
+

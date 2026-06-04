@@ -1,0 +1,14 @@
+[package]
+name = "rust-tauri-renderer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+rust-engine = { path = "../../rust-engine" }
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }
+

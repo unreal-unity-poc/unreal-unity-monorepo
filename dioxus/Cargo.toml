@@ -1,0 +1,11 @@
+[package]
+name = "rust-dioxus-renderer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dioxus = { version = "0.7", features = ["desktop"] }
+rust-engine = { path = "../rust-engine" }
+tokio = { version = "1", features = ["time"] }
+
