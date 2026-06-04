@@ -2,11 +2,23 @@ const canvas = document.querySelector("#scene");
 const context = canvas.getContext("2d");
 const keys = new Set();
 let lastTime = performance.now();
+let queuedWheelZoom = 0;
 
 const invoke = window.__TAURI__.core.invoke;
 
 window.addEventListener("keydown", (event) => keys.add(event.key.toLowerCase()));
 window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
+window.addEventListener(
+  "wheel",
+  (event) => {
+    event.preventDefault();
+    const direction = Math.sign(-event.deltaY);
+    if (direction !== 0) {
+      queuedWheelZoom += direction * 6;
+    }
+  },
+  { passive: false },
+);
 
 function readInput() {
   let rotateX = 0;
@@ -19,6 +31,11 @@ function readInput() {
   if (keys.has("arrowright")) rotateY -= 1;
   if (keys.has("=") || keys.has("+") || keys.has("pageup")) zoom += 1;
   if (keys.has("-") || keys.has("pagedown")) zoom -= 1;
+
+  const queuedZoomForFrame = Math.max(-1, Math.min(1, queuedWheelZoom));
+  zoom += queuedZoomForFrame;
+  queuedWheelZoom -= queuedZoomForFrame;
+  if (Math.abs(queuedWheelZoom) < 0.01) queuedWheelZoom = 0;
 
   return {
     rotateX,
@@ -115,4 +132,3 @@ async function frame(now) {
 }
 
 requestAnimationFrame(frame);
-

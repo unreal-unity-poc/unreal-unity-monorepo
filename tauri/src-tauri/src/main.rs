@@ -3,6 +3,25 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::State;
 
+struct AppEngine {
+    inner: Mutex<Engine>,
+}
+
+// Tauri requires managed state to be Send + Sync because commands may run on
+// worker threads. This target uses the Rust engine directly and never registers
+// an FFI callback, so the callback raw pointer field remains unused here. The
+// mutex serializes all engine access from Tauri commands.
+unsafe impl Send for AppEngine {}
+unsafe impl Sync for AppEngine {}
+
+impl AppEngine {
+    fn new() -> Self {
+        Self {
+            inner: Mutex::new(Engine::new()),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct InputDto {
@@ -72,11 +91,13 @@ impl From<SurfacePatch> for SurfacePatchDto {
 
 #[tauri::command]
 fn tick(
-    engine: State<'_, Mutex<Engine>>,
+    engine: State<'_, AppEngine>,
     input: InputDto,
     dt_seconds: f32,
 ) -> Result<RenderPayloadDto, String> {
     let mut engine = engine
+        .inner()
+        .inner
         .lock()
         .map_err(|_| "Rust engine mutex was poisoned".to_string())?;
 
@@ -101,9 +122,8 @@ fn tick(
 
 fn main() {
     tauri::Builder::default()
-        .manage(Mutex::new(Engine::new()))
+        .manage(AppEngine::new())
         .invoke_handler(tauri::generate_handler![tick])
         .run(tauri::generate_context!())
         .expect("failed to run Tauri renderer");
 }
-

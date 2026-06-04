@@ -6,9 +6,21 @@ const worker = new Worker("./worker.js", { type: "module" });
 let latestFrame = null;
 let latestShared = null;
 let lastInputSentAt = performance.now();
+let queuedWheelZoom = 0;
 
 window.addEventListener("keydown", (event) => keys.add(event.key.toLowerCase()));
 window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
+window.addEventListener(
+  "wheel",
+  (event) => {
+    event.preventDefault();
+    const direction = Math.sign(-event.deltaY);
+    if (direction !== 0) {
+      queuedWheelZoom += direction * 6;
+    }
+  },
+  { passive: false },
+);
 
 worker.addEventListener("message", (event) => {
   if (event.data.type === "frame") {
@@ -39,6 +51,11 @@ function readInput() {
   if (keys.has("=") || keys.has("+") || keys.has("pageup")) zoom += 1;
   if (keys.has("-") || keys.has("pagedown")) zoom -= 1;
 
+  const queuedZoomForFrame = Math.max(-1, Math.min(1, queuedWheelZoom));
+  zoom += queuedZoomForFrame;
+  queuedWheelZoom -= queuedZoomForFrame;
+  if (Math.abs(queuedWheelZoom) < 0.01) queuedWheelZoom = 0;
+
   return {
     rotateX,
     rotateY,
@@ -50,7 +67,7 @@ function readInput() {
 function decodeFrame(buffer) {
   const header = new Uint32Array(buffer, 0, 2);
   const patchCount = header[1];
-  const floats = new Float32Array(buffer, 8);
+  const floats = new Float32Array(buffer, 16);
   const state = readState(floats, 0);
   const patches = [];
 
@@ -202,4 +219,3 @@ function frame(now) {
 }
 
 requestAnimationFrame(frame);
-
