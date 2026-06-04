@@ -5,7 +5,8 @@ This repo is a proof of concept for a same-process Rust to Unity architecture:
 - Rust owns simulation state.
 - Renderers send input intent to Rust first.
 - Rust updates the authoritative earth/globe state.
-- Renderers draw the state exposed by Rust as native `#[repr(C)]` structs or packed WASM frames.
+- Rust can call back into the renderer through a registered FFI callback after each tick.
+- Renderers draw the state pushed by Rust, or fall back to pulling native `#[repr(C)]` structs / packed WASM frames.
 - Per-frame data uses an FFI pointer plus count, not JSON.
 
 ## Layout
@@ -34,17 +35,32 @@ Rust exposes:
 - `rust_engine_destroy(*mut Engine)`
 - `rust_engine_set_control_input(*mut Engine, ControlInput)`
 - `rust_engine_tick(*mut Engine, dt_seconds: f32)`
+- `rust_engine_set_event_callback(*mut Engine, RustEngineEventCallback, user_data)`
+- `rust_engine_clear_event_callback(*mut Engine)`
 - `rust_engine_render_state(*const Engine) -> EarthRenderState`
 - `rust_engine_surface_patches(*const Engine) -> SurfacePatchView`
 
 `EarthRenderState` contains the Rust-owned globe transform, camera distance, atmosphere radius, and light vector.
+
+`EngineEvent` is the Rust-to-host callback payload. Its `kind = 1` event is emitted after each successful tick and carries the current `EarthRenderState`.
 
 `SurfacePatchView` contains:
 
 - `ptr: *const SurfacePatch`
 - `len: usize`
 
-The pointer is Rust-owned and remains valid until the next engine mutation or destroy call. C# reads from it during the frame and does not free it.
+The pointer is Rust-owned and remains valid until the next engine mutation or destroy call. Hosts read from it during the frame and do not free it.
+
+The preferred native loop is bidirectional:
+
+```text
+host input -> rust_engine_set_control_input
+host tick  -> rust_engine_tick
+Rust       -> registered EngineEvent callback
+host UI    -> render callback state
+```
+
+The explicit pull APIs remain useful as fallback diagnostics and for hosts that have not registered callbacks.
 
 The C/C++ contract is mirrored in `rust-engine/include/rust_engine.h`.
 

@@ -1,4 +1,5 @@
 use std::f32::consts::TAU;
+use std::ffi::c_void;
 use std::ptr;
 
 #[repr(C)]
@@ -64,6 +65,22 @@ impl Default for SurfacePatchView {
             len: 0,
         }
     }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct EngineEvent {
+    pub kind: u32,
+    pub frame_index: u64,
+    pub state: EarthRenderState,
+}
+
+pub type EngineEventCallback = unsafe extern "C" fn(user_data: *mut c_void, event: EngineEvent);
+
+#[derive(Clone, Copy)]
+struct CallbackRegistration {
+    callback: EngineEventCallback,
+    user_data: *mut c_void,
 }
 
 const SURFACE_PATCHES: [SurfacePatch; 12] = [
@@ -155,16 +172,20 @@ const SURFACE_PATCHES: [SurfacePatch; 12] = [
 
 pub struct Engine {
     time: f32,
+    frame_index: u64,
     input: ControlInput,
     state: EarthRenderState,
+    callback: Option<CallbackRegistration>,
 }
 
 impl Engine {
     pub fn new() -> Self {
         Self {
             time: 0.0,
+            frame_index: 0,
             input: ControlInput::default(),
             state: EarthRenderState::default(),
+            callback: None,
         }
     }
 
@@ -183,18 +204,23 @@ impl Engine {
 
         if self.input.reset != 0 {
             self.state = EarthRenderState::default();
-            return;
+        } else {
+            let angular_speed = 1.9;
+            self.state.rotation_x = (self.state.rotation_x
+                + self.input.rotate_x * angular_speed * dt)
+                .clamp(-1.35, 1.35);
+            self.state.rotation_y =
+                wrap_radians(self.state.rotation_y + self.input.rotate_y * angular_speed * dt);
+            self.state.cloud_rotation_y = wrap_radians(self.time * 0.08);
+
+            let zoom_speed = 2.2;
+            let zoom_multiplier = (-self.input.zoom * zoom_speed * dt).exp();
+            self.state.camera_distance =
+                (self.state.camera_distance * zoom_multiplier).clamp(2.15, 9.5);
         }
 
-        let angular_speed = 1.9;
-        self.state.rotation_x =
-            (self.state.rotation_x + self.input.rotate_x * angular_speed * dt).clamp(-1.35, 1.35);
-        self.state.rotation_y = wrap_radians(self.state.rotation_y + self.input.rotate_y * angular_speed * dt);
-        self.state.cloud_rotation_y = wrap_radians(self.time * 0.08);
-
-        let zoom_speed = 2.2;
-        let zoom_multiplier = (-self.input.zoom * zoom_speed * dt).exp();
-        self.state.camera_distance = (self.state.camera_distance * zoom_multiplier).clamp(2.15, 9.5);
+        self.frame_index = self.frame_index.wrapping_add(1);
+        self.emit_event(1);
     }
 
     pub fn render_state(&self) -> EarthRenderState {
@@ -210,6 +236,35 @@ impl Engine {
 
     pub fn surface_patches(&self) -> &'static [SurfacePatch] {
         &SURFACE_PATCHES
+    }
+
+    pub fn set_event_callback(
+        &mut self,
+        callback: Option<EngineEventCallback>,
+        user_data: *mut c_void,
+    ) {
+        self.callback = callback.map(|callback| CallbackRegistration {
+            callback,
+            user_data,
+        });
+    }
+
+    pub fn clear_event_callback(&mut self) {
+        self.callback = None;
+    }
+
+    fn emit_event(&self, kind: u32) {
+        if let Some(registration) = self.callback {
+            let event = EngineEvent {
+                kind,
+                frame_index: self.frame_index,
+                state: self.state,
+            };
+
+            unsafe {
+                (registration.callback)(registration.user_data, event);
+            }
+        }
     }
 }
 
@@ -250,6 +305,24 @@ pub unsafe extern "C" fn rust_engine_tick(engine: *mut Engine, dt_seconds: f32) 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn rust_engine_set_event_callback(
+    engine: *mut Engine,
+    callback: Option<EngineEventCallback>,
+    user_data: *mut c_void,
+) {
+    if let Some(engine) = engine.as_mut() {
+        engine.set_event_callback(callback, user_data);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn rust_engine_clear_event_callback(engine: *mut Engine) {
+    if let Some(engine) = engine.as_mut() {
+        engine.clear_event_callback();
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn rust_engine_render_state(engine: *const Engine) -> EarthRenderState {
     engine
         .as_ref()
@@ -268,6 +341,15 @@ pub unsafe extern "C" fn rust_engine_surface_patches(engine: *const Engine) -> S
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static CALLBACK_COUNT: AtomicU64 = AtomicU64::new(0);
+
+    unsafe extern "C" fn count_callback(_user_data: *mut c_void, event: EngineEvent) {
+        if event.kind == 1 {
+            CALLBACK_COUNT.fetch_add(event.frame_index, Ordering::SeqCst);
+        }
+    }
 
     #[test]
     fn creates_default_earth_state() {
@@ -296,5 +378,16 @@ mod tests {
         assert!(updated.rotation_y > original.rotation_y);
         assert!(updated.camera_distance < original.camera_distance);
     }
-}
 
+    #[test]
+    fn tick_emits_callback_to_host() {
+        CALLBACK_COUNT.store(0, Ordering::SeqCst);
+
+        let mut engine = Engine::new();
+        engine.set_event_callback(Some(count_callback), ptr::null_mut());
+        engine.tick(1.0 / 60.0);
+        engine.tick(1.0 / 60.0);
+
+        assert_eq!(CALLBACK_COUNT.load(Ordering::SeqCst), 3);
+    }
+}

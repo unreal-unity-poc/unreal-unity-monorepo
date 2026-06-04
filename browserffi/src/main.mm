@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <dlfcn.h>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -14,11 +16,26 @@ using RustEngineCreate = RustEngine* (*)();
 using RustEngineDestroy = void (*)(RustEngine*);
 using RustEngineSetControlInput = void (*)(RustEngine*, ControlInput);
 using RustEngineTick = void (*)(RustEngine*, float);
+using RustEngineSetEventCallback = void (*)(RustEngine*, RustEngineEventCallback, void*);
+using RustEngineClearEventCallback = void (*)(RustEngine*);
 using RustEngineRenderState = EarthRenderState (*)(const RustEngine*);
 using RustEngineSurfacePatches = SurfacePatchView (*)(const RustEngine*);
 
 namespace
 {
+using Clock = std::chrono::steady_clock;
+
+uint64_t NowMs()
+{
+    const auto now = std::chrono::system_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+}
+
+uint64_t NsSince(Clock::time_point started)
+{
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count();
+}
+
 NSString* HtmlDocument()
 {
     return @R"HTML(
@@ -189,10 +206,37 @@ T ResolveSymbol(void* handle, const char* name)
 
     return reinterpret_cast<T>(symbol);
 }
+
+bool IsRustControlKey(unsigned short keyCode)
+{
+    switch (keyCode) {
+    case 126: // Up
+    case 125: // Down
+    case 123: // Left
+    case 124: // Right
+    case 24:  // +
+    case 69:  // keypad +
+    case 116: // Page Up
+    case 27:  // -
+    case 78:  // keypad -
+    case 121: // Page Down
+    case 15:  // R
+        return true;
+    default:
+        return false;
+    }
+}
 }
 
 @interface BrowserFfiDelegate : NSObject <NSApplicationDelegate, WKNavigationDelegate>
+- (void)handleRustEngineEvent:(EngineEvent)event;
 @end
+
+static void BrowserFfiRustEventCallback(void* userData, EngineEvent event)
+{
+    BrowserFfiDelegate* delegate = (__bridge BrowserFfiDelegate*)userData;
+    [delegate handleRustEngineEvent:event];
+}
 
 @implementation BrowserFfiDelegate {
     NSWindow* _window;
@@ -203,6 +247,10 @@ T ResolveSymbol(void* handle, const char* name)
     NSMutableSet<NSNumber*>* _pressedKeys;
     float _scrollZoom;
     bool _pageReady;
+    int _perfFrames;
+    int _perfFrameCount;
+    int _perfEvalCallbacks;
+    bool _perfTerminateScheduled;
 
     void* _libraryHandle;
     RustEngine* _engine;
@@ -210,17 +258,29 @@ T ResolveSymbol(void* handle, const char* name)
     RustEngineDestroy _destroy;
     RustEngineSetControlInput _setControlInput;
     RustEngineTick _tickEngine;
+    RustEngineSetEventCallback _setEventCallback;
+    RustEngineClearEventCallback _clearEventCallback;
     RustEngineRenderState _renderState;
     RustEngineSurfacePatches _surfacePatches;
+    EarthRenderState _latestState;
+    uint64_t _callbackCount;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification*)notification
 {
     (void)notification;
     _pressedKeys = [NSMutableSet set];
+    const char* perfFrames = getenv("BROWSERFFI_PERF_FRAMES");
+    _perfFrames = perfFrames ? std::max(1, atoi(perfFrames)) : 0;
 
     [self loadRustEngine];
     [self createWindow];
+
+    if (_perfFrames > 0) {
+        std::cout << "{\"ts_unix_ms\":" << NowMs()
+                  << ",\"target\":\"browserffi-wkwebview\",\"phase\":\"start\",\"frames\":" << _perfFrames
+                  << "}\n";
+    }
 
     _lastFrameDate = [NSDate date];
     _timer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
@@ -249,6 +309,9 @@ T ResolveSymbol(void* handle, const char* name)
     _timer = nil;
 
     if (_engine && _destroy) {
+        if (_clearEventCallback) {
+            _clearEventCallback(_engine);
+        }
         _destroy(_engine);
         _engine = nullptr;
     }
@@ -280,10 +343,23 @@ T ResolveSymbol(void* handle, const char* name)
     _destroy = ResolveSymbol<RustEngineDestroy>(_libraryHandle, "rust_engine_destroy");
     _setControlInput = ResolveSymbol<RustEngineSetControlInput>(_libraryHandle, "rust_engine_set_control_input");
     _tickEngine = ResolveSymbol<RustEngineTick>(_libraryHandle, "rust_engine_tick");
+    _setEventCallback = ResolveSymbol<RustEngineSetEventCallback>(_libraryHandle, "rust_engine_set_event_callback");
+    _clearEventCallback = ResolveSymbol<RustEngineClearEventCallback>(_libraryHandle, "rust_engine_clear_event_callback");
     _renderState = ResolveSymbol<RustEngineRenderState>(_libraryHandle, "rust_engine_render_state");
     _surfacePatches = ResolveSymbol<RustEngineSurfacePatches>(_libraryHandle, "rust_engine_surface_patches");
 
     _engine = _create();
+    _setEventCallback(_engine, BrowserFfiRustEventCallback, (__bridge void*)self);
+}
+
+- (void)handleRustEngineEvent:(EngineEvent)event
+{
+    if (event.kind != 1) {
+        return;
+    }
+
+    _latestState = event.state;
+    _callbackCount += 1;
 }
 
 - (void)createWindow
@@ -318,24 +394,36 @@ T ResolveSymbol(void* handle, const char* name)
             return event;
         }
 
-        [strongSelf handleEvent:event];
-        return event;
+        return [strongSelf handleEvent:event] ? nil : event;
     }];
 }
 
-- (void)handleEvent:(NSEvent*)event
+- (BOOL)handleEvent:(NSEvent*)event
 {
     if (event.window != _window) {
-        return;
+        return NO;
     }
 
     if (event.type == NSEventTypeKeyDown) {
+        if (!IsRustControlKey(event.keyCode)) {
+            return NO;
+        }
+
         [_pressedKeys addObject:@(event.keyCode)];
+        return YES;
     } else if (event.type == NSEventTypeKeyUp) {
+        if (!IsRustControlKey(event.keyCode)) {
+            return NO;
+        }
+
         [_pressedKeys removeObject:@(event.keyCode)];
+        return YES;
     } else if (event.type == NSEventTypeScrollWheel) {
         _scrollZoom += std::clamp(static_cast<float>(event.scrollingDeltaY / 18.0), -1.0f, 1.0f);
+        return YES;
     }
+
+    return NO;
 }
 
 - (void)frame:(NSTimer*)timer
@@ -345,18 +433,63 @@ T ResolveSymbol(void* handle, const char* name)
         return;
     }
 
+    if (_perfFrames > 0 && _perfFrameCount >= _perfFrames) {
+        return;
+    }
+
     NSDate* now = [NSDate date];
     NSTimeInterval elapsed = [now timeIntervalSinceDate:_lastFrameDate];
     _lastFrameDate = now;
 
     const float dt = std::clamp(static_cast<float>(elapsed), 0.0f, 0.1f);
+
+    const auto rustStarted = Clock::now();
     _setControlInput(_engine, [self readInput]);
     _tickEngine(_engine, dt);
+    const uint64_t rustNs = NsSince(rustStarted);
 
+    const auto payloadStarted = Clock::now();
     const std::string json = [self buildJson];
+    const uint64_t payloadNs = NsSince(payloadStarted);
     NSString* payload = [NSString stringWithUTF8String:json.c_str()];
     NSString* script = [NSString stringWithFormat:@"window.renderRustState(%@)", payload];
-    [_webView evaluateJavaScript:script completionHandler:nil];
+
+    const int frame = _perfFrameCount;
+    const auto evalStarted = Clock::now();
+    [_webView evaluateJavaScript:script completionHandler:^(id result, NSError* error) {
+        (void)result;
+        if (_perfFrames > 0) {
+            std::cout << "{\"ts_unix_ms\":" << NowMs()
+                      << ",\"target\":\"browserffi-wkwebview\",\"phase\":\"eval_callback\",\"frame\":" << frame
+                      << ",\"eval_callback_ns\":" << NsSince(evalStarted)
+                      << ",\"ok\":" << (error ? "false" : "true")
+                      << "}\n";
+            _perfEvalCallbacks += 1;
+        }
+    }];
+    const uint64_t evalSubmitNs = NsSince(evalStarted);
+
+    if (_perfFrames > 0) {
+        std::cout << "{\"ts_unix_ms\":" << NowMs()
+                  << ",\"target\":\"browserffi-wkwebview\",\"phase\":\"frame\",\"frame\":" << frame
+                  << ",\"rust_tick_ns\":" << rustNs
+                  << ",\"payload_build_ns\":" << payloadNs
+                  << ",\"eval_submit_ns\":" << evalSubmitNs
+                  << ",\"payload_bytes\":" << json.size()
+                  << "}\n";
+
+        _perfFrameCount += 1;
+        if (_perfFrameCount >= _perfFrames && !_perfTerminateScheduled) {
+            _perfTerminateScheduled = true;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                std::cout << "{\"ts_unix_ms\":" << NowMs()
+                          << ",\"target\":\"browserffi-wkwebview\",\"phase\":\"summary\",\"frames\":" << _perfFrameCount
+                          << ",\"eval_callbacks\":" << _perfEvalCallbacks
+                          << "}\n";
+                [NSApp terminate:nil];
+            });
+        }
+    }
 }
 
 - (ControlInput)readInput
@@ -399,7 +532,7 @@ T ResolveSymbol(void* handle, const char* name)
 
 - (std::string)buildJson
 {
-    const EarthRenderState state = _renderState(_engine);
+    const EarthRenderState state = _callbackCount > 0 ? _latestState : _renderState(_engine);
     const SurfacePatchView patches = _surfacePatches(_engine);
 
     std::ostringstream json;
@@ -452,4 +585,3 @@ int main(int argc, const char* argv[])
 
     return 0;
 }
-

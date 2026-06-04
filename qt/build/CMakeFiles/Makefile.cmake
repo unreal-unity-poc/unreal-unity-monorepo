@@ -325,6 +325,7 @@ set(CMAKE_MAKEFILE_OUTPUTS
 # Byproducts of CMake generate step:
 set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/rust_qt_renderer_autogen.dir/AutogenInfo.json"
+  "CMakeFiles/rust_qt_perf_autogen.dir/AutogenInfo.json"
   ".qt/QtDeploySupport.cmake"
   ".qt/QtDeployTargets.cmake"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
@@ -333,6 +334,9 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/rust_qt_renderer.dir/DependInfo.cmake"
+  "CMakeFiles/rust_qt_perf.dir/DependInfo.cmake"
   "CMakeFiles/rust_qt_renderer_autogen_timestamp_deps.dir/DependInfo.cmake"
   "CMakeFiles/rust_qt_renderer_autogen.dir/DependInfo.cmake"
+  "CMakeFiles/rust_qt_perf_autogen_timestamp_deps.dir/DependInfo.cmake"
+  "CMakeFiles/rust_qt_perf_autogen.dir/DependInfo.cmake"
   )

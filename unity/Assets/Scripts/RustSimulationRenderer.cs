@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace RustUnityPoc
@@ -14,6 +15,10 @@ namespace RustUnityPoc
         private Material landMaterial;
         private Material atmosphereMaterial;
         private Light keyLight;
+        private EngineEventCallback engineEventCallback;
+        private GCHandle selfHandle;
+        private EarthRenderState latestRustState;
+        private bool hasLatestRustState;
 
         private void Awake()
         {
@@ -25,6 +30,9 @@ namespace RustUnityPoc
         private void OnEnable()
         {
             engine = RustEngineNative.Create();
+            engineEventCallback = OnRustEngineEvent;
+            selfHandle = GCHandle.Alloc(this);
+            RustEngineNative.SetEventCallback(engine, engineEventCallback, GCHandle.ToIntPtr(selfHandle));
             BuildGlobe();
             BuildSurfacePatches();
         }
@@ -38,8 +46,14 @@ namespace RustUnityPoc
 
             if (engine != IntPtr.Zero)
             {
+                RustEngineNative.ClearEventCallback(engine);
                 RustEngineNative.Destroy(engine);
                 engine = IntPtr.Zero;
+            }
+
+            if (selfHandle.IsAllocated)
+            {
+                selfHandle.Free();
             }
         }
 
@@ -52,7 +66,32 @@ namespace RustUnityPoc
 
             RustEngineNative.SetControlInput(engine, ReadInput());
             RustEngineNative.Tick(engine, Time.deltaTime);
-            ApplyRustState(RustEngineNative.RenderState(engine));
+            ApplyRustState(hasLatestRustState ? latestRustState : RustEngineNative.RenderState(engine));
+        }
+
+        private void HandleRustEngineEvent(EngineEvent engineEvent)
+        {
+            if (engineEvent.kind != 1)
+            {
+                return;
+            }
+
+            latestRustState = engineEvent.state;
+            hasLatestRustState = true;
+        }
+
+        private static void OnRustEngineEvent(IntPtr userData, EngineEvent engineEvent)
+        {
+            if (userData == IntPtr.Zero)
+            {
+                return;
+            }
+
+            GCHandle handle = GCHandle.FromIntPtr(userData);
+            if (handle.Target is RustSimulationRenderer renderer)
+            {
+                renderer.HandleRustEngineEvent(engineEvent);
+            }
         }
 
         private static ControlInput ReadInput()
@@ -215,4 +254,3 @@ namespace RustUnityPoc
         }
     }
 }
-

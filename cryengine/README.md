@@ -5,8 +5,10 @@ CryEngine renders the Rust-owned earth state through a native C++ entity compone
 Hot-path frame data flows as:
 
 ```text
-CryEngine input -> C++ ControlInput -> Rust tick -> EarthRenderState/SurfacePatchView -> CryEngine aux geometry
+CryEngine input -> C++ ControlInput -> Rust tick -> Rust callback -> CryEngine aux geometry
 ```
+
+CryEngine registers a native C++ callback with `rust_engine_set_event_callback` and renders the Rust-pushed `EarthRenderState`.
 
 Build the native library before wiring the component into a CryEngine project:
 

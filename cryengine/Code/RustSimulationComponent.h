@@ -21,12 +21,17 @@ private:
     using RustEngineDestroy = void (*)(RustEngine*);
     using RustEngineSetControlInput = void (*)(RustEngine*, ControlInput);
     using RustEngineTick = void (*)(RustEngine*, float);
+    using RustEngineSetEventCallback = void (*)(RustEngine*, RustEngineEventCallback, void*);
+    using RustEngineClearEventCallback = void (*)(RustEngine*);
     using RustEngineRenderState = EarthRenderState (*)(const RustEngine*);
     using RustEngineSurfacePatches = SurfacePatchView (*)(const RustEngine*);
+
+    static void OnRustEngineEvent(void* UserData, EngineEvent Event);
 
     void LoadRustEngine();
     void UnloadRustEngine();
     ControlInput ReadInput() const;
+    void HandleRustEngineEvent(EngineEvent Event);
     void RenderRustState(EarthRenderState State, SurfacePatchView Patches) const;
 
     void* LibraryHandle = nullptr;
@@ -35,6 +40,10 @@ private:
     RustEngineDestroy Destroy = nullptr;
     RustEngineSetControlInput SetControlInput = nullptr;
     RustEngineTick TickEngine = nullptr;
+    RustEngineSetEventCallback SetEventCallback = nullptr;
+    RustEngineClearEventCallback ClearEventCallback = nullptr;
     RustEngineRenderState RenderState = nullptr;
     RustEngineSurfacePatches SurfacePatches = nullptr;
+    EarthRenderState LatestState {};
+    bool HasLatestState = false;
 };

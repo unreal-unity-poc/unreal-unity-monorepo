@@ -8,7 +8,7 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    let engine = use_signal(Engine::new);
+    let mut engine = use_signal(Engine::new);
     let mut frame = use_signal(|| 0_u64);
 
     use_future(move || async move {
@@ -25,6 +25,7 @@ fn App() -> Element {
     let globe_radius = 240.0 * (4.2 / state.camera_distance);
 
     rsx! {
+        document::Title { "Rust Dioxus Renderer" }
         style { {STYLE} }
         div { class: "shell",
             svg { view_box: "0 0 900 700", width: "900", height: "700",
@@ -104,4 +105,3 @@ svg {
   height: min(100vh, 700px);
 }
 "#;
-

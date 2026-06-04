@@ -2,11 +2,12 @@
 
 Qt renders the Rust-owned simulation state through a small C++ Widgets app.
 
-Planned shape:
+Shape:
 
 - A Qt C++ application dynamically loads the Rust engine library.
 - Qt sends input into Rust through the same C ABI.
-- Qt renders `EarthRenderState` and `SurfacePatchView` as a projected globe with `QPainter`.
+- Rust calls back into Qt with `EarthRenderState` after each tick.
+- Qt renders the callback state plus `SurfacePatchView` as a projected globe with `QPainter`.
 
 The key comparison point against Unity and Unreal is the lower engine overhead and more conventional desktop UI/tooling model.
 

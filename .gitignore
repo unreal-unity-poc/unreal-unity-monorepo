@@ -13,6 +13,7 @@
 /godot/.godot/
 /godot/bin/
 /godot/obj/
+/qt/build/
 /tauri/node_modules/
 /tauri/dist/
 /tauri/src-tauri/target/
@@ -21,9 +22,12 @@
 /dioxus/target/
 /leptos/target/
 /wasm/pkg/
+/wasm/pkg-node/
 /wasm/target/
 /v8-blink/build/
 /browserffi/build/
+/perf/native-ffi/build/
+/perf/logs/
 *.user
 *.pidb
 *.booproj

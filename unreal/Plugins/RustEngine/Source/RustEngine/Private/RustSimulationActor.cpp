@@ -51,6 +51,10 @@ void ARustSimulationActor::BeginPlay()
     if (Create)
     {
         Engine = Create();
+        if (Engine && SetEventCallback)
+        {
+            SetEventCallback(Engine, &ARustSimulationActor::OnRustEngineEvent, this);
+        }
     }
 }
 
@@ -58,6 +62,10 @@ void ARustSimulationActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     if (Engine && Destroy)
     {
+        if (ClearEventCallback)
+        {
+            ClearEventCallback(Engine);
+        }
         Destroy(Engine);
         Engine = nullptr;
     }
@@ -77,7 +85,7 @@ void ARustSimulationActor::Tick(float DeltaSeconds)
 
     SetControlInput(Engine, ReadInput());
     TickEngine(Engine, DeltaSeconds);
-    RenderRustState(RenderState(Engine), SurfacePatches(Engine));
+    RenderRustState(bHasLatestState ? LatestState : RenderState(Engine), SurfacePatches(Engine));
 }
 
 void ARustSimulationActor::LoadRustEngine()
@@ -97,10 +105,34 @@ void ARustSimulationActor::LoadRustEngine()
         FPlatformProcess::GetDllExport(RustLibraryHandle, TEXT("rust_engine_set_control_input")));
     TickEngine = reinterpret_cast<RustEngineTick>(
         FPlatformProcess::GetDllExport(RustLibraryHandle, TEXT("rust_engine_tick")));
+    SetEventCallback = reinterpret_cast<RustEngineSetEventCallback>(
+        FPlatformProcess::GetDllExport(RustLibraryHandle, TEXT("rust_engine_set_event_callback")));
+    ClearEventCallback = reinterpret_cast<RustEngineClearEventCallback>(
+        FPlatformProcess::GetDllExport(RustLibraryHandle, TEXT("rust_engine_clear_event_callback")));
     RenderState = reinterpret_cast<RustEngineRenderState>(
         FPlatformProcess::GetDllExport(RustLibraryHandle, TEXT("rust_engine_render_state")));
     SurfacePatches = reinterpret_cast<RustEngineSurfacePatches>(
         FPlatformProcess::GetDllExport(RustLibraryHandle, TEXT("rust_engine_surface_patches")));
+}
+
+void ARustSimulationActor::OnRustEngineEvent(void* UserData, EngineEvent Event)
+{
+    ARustSimulationActor* Actor = static_cast<ARustSimulationActor*>(UserData);
+    if (Actor)
+    {
+        Actor->HandleRustEngineEvent(Event);
+    }
+}
+
+void ARustSimulationActor::HandleRustEngineEvent(EngineEvent Event)
+{
+    if (Event.kind != 1)
+    {
+        return;
+    }
+
+    LatestState = Event.state;
+    bHasLatestState = true;
 }
 
 void ARustSimulationActor::UnloadRustEngine()

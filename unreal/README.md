@@ -6,7 +6,8 @@ Shape:
 
 - A native Unreal C++ plugin/module loads the Rust dynamic library.
 - Unreal sends input into Rust with C ABI calls.
-- Unreal reads `EarthRenderState` and `SurfacePatchView` from Rust and maps them to a globe mesh plus instanced land patches.
+- Unreal registers a Rust event callback and receives `EarthRenderState` from Rust after each tick.
+- Unreal reads `SurfacePatchView` from Rust and maps the callback state plus patches to a globe mesh and instanced land patches.
 
 The key comparison point against Unity is that Unreal can call the native Rust ABI directly from C++ without going through C# P/Invoke.
 

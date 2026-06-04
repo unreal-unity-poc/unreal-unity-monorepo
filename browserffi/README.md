@@ -13,7 +13,7 @@ native host ControlInput
         ↓
 Rust dylib through C ABI
         ↓
-EarthRenderState + SurfacePatchView
+Rust callback with EarthRenderState + SurfacePatchView pull for static patches
         ↓
 WKWebView JavaScript call
         ↓

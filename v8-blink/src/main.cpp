@@ -1,16 +1,19 @@
 #include "rust_engine.h"
 
+#include <chrono>
 #include <iostream>
 
 int main()
 {
+    const auto now = std::chrono::system_clock::now().time_since_epoch();
+    const auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
     std::cout
-        << "V8/Blink concept target:\n"
-        << "  Rust owns EarthRenderState and SurfacePatch memory.\n"
-        << "  V8 should receive that memory as an external ArrayBuffer or WASM memory view.\n"
-        << "  Blink should render from JS/DOM/canvas/WebGPU without JSON on the hot path.\n";
-
-    std::cout << "EarthRenderState stride bytes: " << sizeof(EarthRenderState) << '\n';
-    std::cout << "SurfacePatch stride bytes: " << sizeof(SurfacePatch) << '\n';
+        << "{\"ts_unix_ms\":" << ts
+        << ",\"target\":\"v8-blink-concept\""
+        << ",\"phase\":\"summary\""
+        << ",\"earth_state_stride_bytes\":" << sizeof(EarthRenderState)
+        << ",\"surface_patch_stride_bytes\":" << sizeof(SurfacePatch)
+        << ",\"note\":\"concept target only; no embedded V8/Blink runtime measured\""
+        << "}\n";
     return 0;
 }

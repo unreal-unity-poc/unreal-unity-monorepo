@@ -8,6 +8,7 @@
 #include <QRadialGradient>
 #include <QSet>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QWidget>
 
 #include <algorithm>
@@ -18,6 +19,8 @@ using RustEngineCreate = RustEngine* (*)();
 using RustEngineDestroy = void (*)(RustEngine*);
 using RustEngineSetControlInput = void (*)(RustEngine*, ControlInput);
 using RustEngineTick = void (*)(RustEngine*, float);
+using RustEngineSetEventCallback = void (*)(RustEngine*, RustEngineEventCallback, void*);
+using RustEngineClearEventCallback = void (*)(RustEngine*);
 using RustEngineRenderState = EarthRenderState (*)(const RustEngine*);
 using RustEngineSurfacePatches = SurfacePatchView (*)(const RustEngine*);
 
@@ -33,6 +36,8 @@ struct RustApi {
     RustEngineDestroy destroy = nullptr;
     RustEngineSetControlInput setControlInput = nullptr;
     RustEngineTick tick = nullptr;
+    RustEngineSetEventCallback setEventCallback = nullptr;
+    RustEngineClearEventCallback clearEventCallback = nullptr;
     RustEngineRenderState renderState = nullptr;
     RustEngineSurfacePatches surfacePatches = nullptr;
 
@@ -47,6 +52,8 @@ struct RustApi {
         destroy = resolve<RustEngineDestroy>("rust_engine_destroy");
         setControlInput = resolve<RustEngineSetControlInput>("rust_engine_set_control_input");
         tick = resolve<RustEngineTick>("rust_engine_tick");
+        setEventCallback = resolve<RustEngineSetEventCallback>("rust_engine_set_event_callback");
+        clearEventCallback = resolve<RustEngineClearEventCallback>("rust_engine_clear_event_callback");
         renderState = resolve<RustEngineRenderState>("rust_engine_render_state");
         surfacePatches = resolve<RustEngineSurfacePatches>("rust_engine_surface_patches");
     }
@@ -73,6 +80,7 @@ public:
         setMinimumSize(900, 700);
         setFocusPolicy(Qt::StrongFocus);
         frameClock.start();
+        api.setEventCallback(engine, &RustQtRenderer::onRustEngineEvent, this);
 
         connect(&timer, &QTimer::timeout, this, [this] {
             const float dt = std::clamp(frameClock.restart() / 1000.0f, 0.0f, 0.1f);
@@ -87,6 +95,7 @@ public:
     ~RustQtRenderer() override
     {
         if (engine) {
+            api.clearEventCallback(engine);
             api.destroy(engine);
         }
     }
@@ -98,7 +107,7 @@ protected:
         painter.setRenderHint(QPainter::Antialiasing, true);
         painter.fillRect(rect(), QColor(8, 11, 18));
 
-        const EarthRenderState state = api.renderState(engine);
+        const EarthRenderState state = hasLatestState ? latestState : api.renderState(engine);
         const QPointF center(width() * 0.5, height() * 0.5);
         const double globeRadius = std::min(width(), height()) * 0.32 * (4.2 / state.camera_distance);
 
@@ -127,14 +136,42 @@ protected:
         pressedKeys.remove(event->key());
     }
 
+    void wheelEvent(QWheelEvent* event) override
+    {
+        const QPoint angleDelta = event->angleDelta();
+        const QPoint pixelDelta = event->pixelDelta();
+        const int rawDelta = angleDelta.y() != 0 ? angleDelta.y() : pixelDelta.y();
+        if (rawDelta == 0) {
+            event->ignore();
+            return;
+        }
+
+        queuedWheelZoom += std::clamp(static_cast<float>(rawDelta) / 120.0f, -4.0f, 4.0f);
+        event->accept();
+    }
+
 private:
     RustApi api;
     RustEngine* engine = nullptr;
     QElapsedTimer frameClock;
     QTimer timer;
     QSet<int> pressedKeys;
+    EarthRenderState latestState {};
+    bool hasLatestState = false;
+    float queuedWheelZoom = 0.0f;
 
-    ControlInput readInput() const
+    static void onRustEngineEvent(void* userData, EngineEvent event)
+    {
+        if (!userData || event.kind != 1) {
+            return;
+        }
+
+        auto* renderer = static_cast<RustQtRenderer*>(userData);
+        renderer->latestState = event.state;
+        renderer->hasLatestState = true;
+    }
+
+    ControlInput readInput()
     {
         ControlInput input {};
 
@@ -161,6 +198,9 @@ private:
         if (pressedKeys.contains(Qt::Key_Minus) || pressedKeys.contains(Qt::Key_PageDown)) {
             input.zoom -= 1.0f;
         }
+
+        input.zoom += std::clamp(queuedWheelZoom, -1.0f, 1.0f);
+        queuedWheelZoom = 0.0f;
 
         input.reset = pressedKeys.contains(Qt::Key_R) ? 1u : 0u;
         return input;
@@ -239,4 +279,3 @@ int main(int argc, char* argv[])
 
     return app.exec();
 }
-

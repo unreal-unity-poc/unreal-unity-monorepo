@@ -1,5 +1,8 @@
 /Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/rust_qt_renderer.dir
+/Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/rust_qt_perf.dir
 /Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/edit_cache.dir
 /Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/rebuild_cache.dir
 /Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/rust_qt_renderer_autogen_timestamp_deps.dir
 /Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/rust_qt_renderer_autogen.dir
+/Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/rust_qt_perf_autogen_timestamp_deps.dir
+/Users/maca5/codes/unreal-unity-poc/rust-unity-unreal-poc/qt/build/CMakeFiles/rust_qt_perf_autogen.dir

@@ -130,6 +130,19 @@ rust_qt_renderer/fast:
 .PHONY : rust_qt_renderer/fast
 
 #=============================================================================
+# Target rules for targets named rust_qt_perf
+
+# Build rule for target.
+rust_qt_perf: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 rust_qt_perf
+.PHONY : rust_qt_perf
+
+# fast build rule for target.
+rust_qt_perf/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf.dir/build.make CMakeFiles/rust_qt_perf.dir/build
+.PHONY : rust_qt_perf/fast
+
+#=============================================================================
 # Target rules for targets named rust_qt_renderer_autogen_timestamp_deps
 
 # Build rule for target.
@@ -154,6 +167,56 @@ rust_qt_renderer_autogen: cmake_check_build_system
 rust_qt_renderer_autogen/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_renderer_autogen.dir/build.make CMakeFiles/rust_qt_renderer_autogen.dir/build
 .PHONY : rust_qt_renderer_autogen/fast
+
+#=============================================================================
+# Target rules for targets named rust_qt_perf_autogen_timestamp_deps
+
+# Build rule for target.
+rust_qt_perf_autogen_timestamp_deps: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 rust_qt_perf_autogen_timestamp_deps
+.PHONY : rust_qt_perf_autogen_timestamp_deps
+
+# fast build rule for target.
+rust_qt_perf_autogen_timestamp_deps/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf_autogen_timestamp_deps.dir/build.make CMakeFiles/rust_qt_perf_autogen_timestamp_deps.dir/build
+.PHONY : rust_qt_perf_autogen_timestamp_deps/fast
+
+#=============================================================================
+# Target rules for targets named rust_qt_perf_autogen
+
+# Build rule for target.
+rust_qt_perf_autogen: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 rust_qt_perf_autogen
+.PHONY : rust_qt_perf_autogen
+
+# fast build rule for target.
+rust_qt_perf_autogen/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf_autogen.dir/build.make CMakeFiles/rust_qt_perf_autogen.dir/build
+.PHONY : rust_qt_perf_autogen/fast
+
+rust_qt_perf_autogen/mocs_compilation.o: rust_qt_perf_autogen/mocs_compilation.cpp.o
+.PHONY : rust_qt_perf_autogen/mocs_compilation.o
+
+# target to build an object file
+rust_qt_perf_autogen/mocs_compilation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf.dir/build.make CMakeFiles/rust_qt_perf.dir/rust_qt_perf_autogen/mocs_compilation.cpp.o
+.PHONY : rust_qt_perf_autogen/mocs_compilation.cpp.o
+
+rust_qt_perf_autogen/mocs_compilation.i: rust_qt_perf_autogen/mocs_compilation.cpp.i
+.PHONY : rust_qt_perf_autogen/mocs_compilation.i
+
+# target to preprocess a source file
+rust_qt_perf_autogen/mocs_compilation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf.dir/build.make CMakeFiles/rust_qt_perf.dir/rust_qt_perf_autogen/mocs_compilation.cpp.i
+.PHONY : rust_qt_perf_autogen/mocs_compilation.cpp.i
+
+rust_qt_perf_autogen/mocs_compilation.s: rust_qt_perf_autogen/mocs_compilation.cpp.s
+.PHONY : rust_qt_perf_autogen/mocs_compilation.s
+
+# target to generate assembly for a file
+rust_qt_perf_autogen/mocs_compilation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf.dir/build.make CMakeFiles/rust_qt_perf.dir/rust_qt_perf_autogen/mocs_compilation.cpp.s
+.PHONY : rust_qt_perf_autogen/mocs_compilation.cpp.s
 
 rust_qt_renderer_autogen/mocs_compilation.o: rust_qt_renderer_autogen/mocs_compilation.cpp.o
 .PHONY : rust_qt_renderer_autogen/mocs_compilation.o
@@ -203,6 +266,30 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_renderer.dir/build.make CMakeFiles/rust_qt_renderer.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/perf_main.o: src/perf_main.cpp.o
+.PHONY : src/perf_main.o
+
+# target to build an object file
+src/perf_main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf.dir/build.make CMakeFiles/rust_qt_perf.dir/src/perf_main.cpp.o
+.PHONY : src/perf_main.cpp.o
+
+src/perf_main.i: src/perf_main.cpp.i
+.PHONY : src/perf_main.i
+
+# target to preprocess a source file
+src/perf_main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf.dir/build.make CMakeFiles/rust_qt_perf.dir/src/perf_main.cpp.i
+.PHONY : src/perf_main.cpp.i
+
+src/perf_main.s: src/perf_main.cpp.s
+.PHONY : src/perf_main.s
+
+# target to generate assembly for a file
+src/perf_main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/rust_qt_perf.dir/build.make CMakeFiles/rust_qt_perf.dir/src/perf_main.cpp.s
+.PHONY : src/perf_main.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -211,15 +298,24 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... rust_qt_perf_autogen"
+	@echo "... rust_qt_perf_autogen_timestamp_deps"
 	@echo "... rust_qt_renderer_autogen"
 	@echo "... rust_qt_renderer_autogen_timestamp_deps"
+	@echo "... rust_qt_perf"
 	@echo "... rust_qt_renderer"
+	@echo "... rust_qt_perf_autogen/mocs_compilation.o"
+	@echo "... rust_qt_perf_autogen/mocs_compilation.i"
+	@echo "... rust_qt_perf_autogen/mocs_compilation.s"
 	@echo "... rust_qt_renderer_autogen/mocs_compilation.o"
 	@echo "... rust_qt_renderer_autogen/mocs_compilation.i"
 	@echo "... rust_qt_renderer_autogen/mocs_compilation.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/perf_main.o"
+	@echo "... src/perf_main.i"
+	@echo "... src/perf_main.s"
 .PHONY : help
 
 

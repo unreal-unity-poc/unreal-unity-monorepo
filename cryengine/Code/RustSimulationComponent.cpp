@@ -28,6 +28,10 @@ CRustSimulationComponent::~CRustSimulationComponent()
 {
     if (Engine && Destroy)
     {
+        if (ClearEventCallback)
+        {
+            ClearEventCallback(Engine);
+        }
         Destroy(Engine);
         Engine = nullptr;
     }
@@ -50,6 +54,10 @@ void CRustSimulationComponent::Initialize()
     if (Create)
     {
         Engine = Create();
+        if (Engine && SetEventCallback)
+        {
+            SetEventCallback(Engine, &CRustSimulationComponent::OnRustEngineEvent, this);
+        }
     }
 }
 
@@ -68,7 +76,7 @@ void CRustSimulationComponent::ProcessEvent(const SEntityEvent& Event)
     const float DeltaSeconds = Event.fParam[0];
     SetControlInput(Engine, ReadInput());
     TickEngine(Engine, DeltaSeconds);
-    RenderRustState(RenderState(Engine), SurfacePatches(Engine));
+    RenderRustState(HasLatestState ? LatestState : RenderState(Engine), SurfacePatches(Engine));
 }
 
 void CRustSimulationComponent::LoadRustEngine()
@@ -84,6 +92,8 @@ void CRustSimulationComponent::LoadRustEngine()
     Destroy = reinterpret_cast<RustEngineDestroy>(CryGetProcAddress(LibraryHandle, "rust_engine_destroy"));
     SetControlInput = reinterpret_cast<RustEngineSetControlInput>(CryGetProcAddress(LibraryHandle, "rust_engine_set_control_input"));
     TickEngine = reinterpret_cast<RustEngineTick>(CryGetProcAddress(LibraryHandle, "rust_engine_tick"));
+    SetEventCallback = reinterpret_cast<RustEngineSetEventCallback>(CryGetProcAddress(LibraryHandle, "rust_engine_set_event_callback"));
+    ClearEventCallback = reinterpret_cast<RustEngineClearEventCallback>(CryGetProcAddress(LibraryHandle, "rust_engine_clear_event_callback"));
     RenderState = reinterpret_cast<RustEngineRenderState>(CryGetProcAddress(LibraryHandle, "rust_engine_render_state"));
     SurfacePatches = reinterpret_cast<RustEngineSurfacePatches>(CryGetProcAddress(LibraryHandle, "rust_engine_surface_patches"));
 }
@@ -95,6 +105,26 @@ void CRustSimulationComponent::UnloadRustEngine()
         CryFreeLibrary(LibraryHandle);
         LibraryHandle = nullptr;
     }
+}
+
+void CRustSimulationComponent::OnRustEngineEvent(void* UserData, EngineEvent Event)
+{
+    CRustSimulationComponent* Component = static_cast<CRustSimulationComponent*>(UserData);
+    if (Component)
+    {
+        Component->HandleRustEngineEvent(Event);
+    }
+}
+
+void CRustSimulationComponent::HandleRustEngineEvent(EngineEvent Event)
+{
+    if (Event.kind != 1)
+    {
+        return;
+    }
+
+    LatestState = Event.state;
+    HasLatestState = true;
 }
 
 ControlInput CRustSimulationComponent::ReadInput() const

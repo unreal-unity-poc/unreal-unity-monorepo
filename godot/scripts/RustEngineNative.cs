@@ -46,6 +46,17 @@ public struct SurfacePatchView
     public UIntPtr Len;
 }
 
+[StructLayout(LayoutKind.Sequential)]
+public struct EngineEvent
+{
+    public uint Kind;
+    public ulong FrameIndex;
+    public EarthRenderState State;
+}
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+internal delegate void EngineEventCallback(IntPtr userData, EngineEvent engineEvent);
+
 internal static class RustEngineNative
 {
     private const string LibraryName = "rust_engine";
@@ -55,22 +66,31 @@ internal static class RustEngineNative
         NativeLibrary.SetDllImportResolver(typeof(RustEngineNative).Assembly, ResolveLibrary);
     }
 
-    [DllImport(LibraryName, EntryPoint = "rust_engine_create")]
+    [DllImport(LibraryName, EntryPoint = "rust_engine_create", CallingConvention = CallingConvention.Cdecl)]
     internal static extern IntPtr Create();
 
-    [DllImport(LibraryName, EntryPoint = "rust_engine_destroy")]
+    [DllImport(LibraryName, EntryPoint = "rust_engine_destroy", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void Destroy(IntPtr engine);
 
-    [DllImport(LibraryName, EntryPoint = "rust_engine_set_control_input")]
+    [DllImport(LibraryName, EntryPoint = "rust_engine_set_control_input", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void SetControlInput(IntPtr engine, ControlInput input);
 
-    [DllImport(LibraryName, EntryPoint = "rust_engine_tick")]
+    [DllImport(LibraryName, EntryPoint = "rust_engine_tick", CallingConvention = CallingConvention.Cdecl)]
     internal static extern void Tick(IntPtr engine, float dtSeconds);
 
-    [DllImport(LibraryName, EntryPoint = "rust_engine_render_state")]
+    [DllImport(LibraryName, EntryPoint = "rust_engine_set_event_callback", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void SetEventCallback(
+        IntPtr engine,
+        EngineEventCallback callback,
+        IntPtr userData);
+
+    [DllImport(LibraryName, EntryPoint = "rust_engine_clear_event_callback", CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void ClearEventCallback(IntPtr engine);
+
+    [DllImport(LibraryName, EntryPoint = "rust_engine_render_state", CallingConvention = CallingConvention.Cdecl)]
     internal static extern EarthRenderState RenderState(IntPtr engine);
 
-    [DllImport(LibraryName, EntryPoint = "rust_engine_surface_patches")]
+    [DllImport(LibraryName, EntryPoint = "rust_engine_surface_patches", CallingConvention = CallingConvention.Cdecl)]
     internal static extern SurfacePatchView SurfacePatches(IntPtr engine);
 
     private static IntPtr ResolveLibrary(
@@ -112,4 +132,3 @@ internal static class RustEngineNative
         throw new PlatformNotSupportedException("No Rust engine native library path for this OS.");
     }
 }
-

@@ -36,3 +36,8 @@ add_executable(rust_cef_bridge_smoke
 
 target_link_libraries(rust_cef_bridge_smoke PRIVATE rust_cef_bridge)
 
+add_executable(rust_cef_bridge_perf
+    src/perf_main.cpp
+)
+
+target_link_libraries(rust_cef_bridge_perf PRIVATE rust_cef_bridge)

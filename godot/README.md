@@ -5,8 +5,10 @@ Godot renders the Rust-owned simulation state through C# P/Invoke.
 Hot-path frame data flows as:
 
 ```text
-Godot input -> C# ControlInput -> Rust tick -> EarthRenderState/SurfacePatchView -> Godot globe
+Godot input -> C# ControlInput -> Rust tick -> Rust callback -> Godot globe
 ```
+
+Godot registers a managed delegate with `rust_engine_set_event_callback`, pins the renderer instance with `GCHandle`, and applies the `EarthRenderState` Rust pushes back during `rust_engine_tick`.
 
 Open this folder with the C# capable Godot editor after building the native plugin:
 

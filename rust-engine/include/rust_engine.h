@@ -41,14 +41,26 @@ typedef struct SurfacePatchView {
     size_t len;
 } SurfacePatchView;
 
+typedef struct EngineEvent {
+    uint32_t kind;
+    uint64_t frame_index;
+    EarthRenderState state;
+} EngineEvent;
+
+typedef void (*RustEngineEventCallback)(void* user_data, EngineEvent event);
+
 RustEngine* rust_engine_create(void);
 void rust_engine_destroy(RustEngine* engine);
 void rust_engine_set_control_input(RustEngine* engine, ControlInput input);
 void rust_engine_tick(RustEngine* engine, float dt_seconds);
+void rust_engine_set_event_callback(
+    RustEngine* engine,
+    RustEngineEventCallback callback,
+    void* user_data);
+void rust_engine_clear_event_callback(RustEngine* engine);
 EarthRenderState rust_engine_render_state(const RustEngine* engine);
 SurfacePatchView rust_engine_surface_patches(const RustEngine* engine);
 
 #ifdef __cplusplus
 }
 #endif
-

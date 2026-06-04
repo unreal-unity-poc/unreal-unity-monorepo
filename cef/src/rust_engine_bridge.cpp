@@ -54,14 +54,20 @@ RustEngineBridge::RustEngineBridge()
     destroy = resolve<RustEngineDestroy>("rust_engine_destroy");
     set_control_input = resolve<RustEngineSetControlInput>("rust_engine_set_control_input");
     tick_engine = resolve<RustEngineTick>("rust_engine_tick");
+    set_event_callback = resolve<RustEngineSetEventCallback>("rust_engine_set_event_callback");
+    clear_event_callback = resolve<RustEngineClearEventCallback>("rust_engine_clear_event_callback");
     render_state = resolve<RustEngineRenderState>("rust_engine_render_state");
     surface_patches = resolve<RustEngineSurfacePatches>("rust_engine_surface_patches");
     engine = create();
+    set_event_callback(engine, on_rust_event, this);
 }
 
 RustEngineBridge::~RustEngineBridge()
 {
     if (engine && destroy) {
+        if (clear_event_callback) {
+            clear_event_callback(engine);
+        }
         destroy(engine);
         engine = nullptr;
     }
@@ -74,7 +80,7 @@ std::string RustEngineBridge::tick_json(ControlInput input, float dt_seconds)
     set_control_input(engine, input);
     tick_engine(engine, dt_seconds);
 
-    const EarthRenderState state = render_state(engine);
+    const EarthRenderState state = callback_count > 0 ? latest_state : render_state(engine);
     const SurfacePatchView patches = surface_patches(engine);
     std::ostringstream json;
     json << "{\"state\":{"
@@ -107,6 +113,13 @@ std::string RustEngineBridge::tick_json(ControlInput input, float dt_seconds)
     return json.str();
 }
 
+void RustEngineBridge::on_rust_event(void* user_data, EngineEvent event)
+{
+    auto* bridge = static_cast<RustEngineBridge*>(user_data);
+    bridge->latest_state = event.state;
+    bridge->callback_count += 1;
+}
+
 template <typename T>
 T RustEngineBridge::resolve(const char* name)
 {
@@ -117,4 +130,3 @@ T RustEngineBridge::resolve(const char* name)
 
     return reinterpret_cast<T>(symbol);
 }
-
