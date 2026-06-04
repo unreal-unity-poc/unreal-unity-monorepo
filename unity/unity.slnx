@@ -1,0 +1,4 @@
+﻿<Solution>
+  <Project Path="RustUnityPoc.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+</Solution>

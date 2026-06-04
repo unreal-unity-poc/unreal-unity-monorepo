@@ -22,9 +22,7 @@ namespace RustUnityPoc
 
         private void Awake()
         {
-            oceanMaterial = BuildMaterial(new Color(0.05f, 0.26f, 0.65f));
-            landMaterial = BuildMaterial(new Color(0.16f, 0.47f, 0.22f));
-            atmosphereMaterial = BuildTransparentMaterial(new Color(0.45f, 0.72f, 1.0f, 0.24f));
+            Debug.Log("Rust Unity renderer awake.");
         }
 
         private void OnEnable()
@@ -149,6 +147,13 @@ namespace RustUnityPoc
             earthSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             earthSphere.name = "Earth Ocean";
             earthSphere.transform.SetParent(globeRoot, false);
+            Shader solidShader = LoadShader("Shaders/RustUnlitColor");
+            Shader transparentShader = LoadShader("Shaders/RustUnlitTransparent");
+
+            oceanMaterial = BuildMaterial(solidShader, new Color(0.05f, 0.26f, 0.65f));
+            landMaterial = BuildMaterial(solidShader, new Color(0.16f, 0.47f, 0.22f));
+            atmosphereMaterial = BuildTransparentMaterial(transparentShader, new Color(0.45f, 0.72f, 1.0f, 0.24f));
+
             earthSphere.GetComponent<Renderer>().sharedMaterial = oceanMaterial;
 
             landRoot = new GameObject("Earth Land").transform;
@@ -226,31 +231,75 @@ namespace RustUnityPoc
                 cosLat * Mathf.Cos(lon)).normalized;
         }
 
-        private static Material BuildMaterial(Color color)
+        private static Material BuildMaterial(Shader shader, Color color)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null)
             {
-                shader = Shader.Find("Standard");
+                throw new InvalidOperationException("Unity did not provide a usable runtime shader.");
             }
 
-            return new Material(shader)
-            {
-                color = color,
-            };
+            Material material = new(shader);
+            ApplyMaterialColor(material, color);
+            return material;
         }
 
-        private static Material BuildTransparentMaterial(Color color)
+        private static Shader LoadShader(string resourcesPath)
         {
-            Material material = BuildMaterial(color);
-            material.color = color;
-            material.SetFloat("_Mode", 3.0f);
-            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            material.SetInt("_ZWrite", 0);
+            Shader shader = Resources.Load<Shader>(resourcesPath);
+            if (shader == null)
+            {
+                throw new InvalidOperationException($"Failed to load bundled shader resource '{resourcesPath}'.");
+            }
+
+            return shader;
+        }
+
+        private static Material BuildTransparentMaterial(Shader shader, Color color)
+        {
+            Material material = BuildMaterial(shader, color);
+            if (material.HasProperty("_Mode"))
+            {
+                material.SetFloat("_Mode", 3.0f);
+            }
+
+            if (material.HasProperty("_Surface"))
+            {
+                material.SetFloat("_Surface", 1.0f);
+            }
+
+            if (material.HasProperty("_SrcBlend"))
+            {
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            }
+
+            if (material.HasProperty("_DstBlend"))
+            {
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            }
+
+            if (material.HasProperty("_ZWrite"))
+            {
+                material.SetInt("_ZWrite", 0);
+            }
+
             material.EnableKeyword("_ALPHABLEND_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.renderQueue = 3000;
             return material;
+        }
+
+        private static void ApplyMaterialColor(Material material, Color color)
+        {
+            material.color = color;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
+
+            if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", color);
+            }
         }
     }
 }
