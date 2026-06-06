@@ -26,6 +26,7 @@ case "$(uname -s)" in
       "$ROOT/tauri/src-tauri/native/macos"
       "$ROOT/cef/native/macos"
       "$ROOT/browserffi/native/macos"
+      "$ROOT/electron-abi/native/macos"
       "$ROOT/dioxus/native/macos"
       "$ROOT/leptos/native/macos"
     )
@@ -41,6 +42,7 @@ case "$(uname -s)" in
       "$ROOT/tauri/src-tauri/native/linux"
       "$ROOT/cef/native/linux"
       "$ROOT/browserffi/native/linux"
+      "$ROOT/electron-abi/native/linux"
       "$ROOT/dioxus/native/linux"
       "$ROOT/leptos/native/linux"
     )
@@ -57,6 +59,7 @@ case "$(uname -s)" in
       "$ROOT/cef/native/windows"
       "$ROOT/webview2/native/windows"
       "$ROOT/browserffi/native/windows"
+      "$ROOT/electron-abi/native/windows"
       "$ROOT/dioxus/native/windows"
       "$ROOT/leptos/native/windows"
     )

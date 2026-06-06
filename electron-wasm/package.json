@@ -1,0 +1,14 @@
+{
+  "name": "rust-electron-wasm-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "start": "npm run build:wasm && electron ."
+  },
+  "devDependencies": {
+    "electron": "42.3.3"
+  }
+}

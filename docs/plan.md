@@ -44,6 +44,7 @@ True same-process native FFI:
 - CEF host: native C++ bridge calls Rust C ABI, then forwards state into Chromium.
 - WebView2 host: native Windows C++ bridge calls Rust C ABI, then forwards state into WebView2.
 - Browser FFI: native WebKit/WKWebView host calls Rust C ABI and injects render state into HTML canvas.
+- Electron ABI: Electron renderer calls a Node-API native addon, which calls the Rust C ABI in-process before returning a frame buffer for canvas drawing.
 - Native perf harnesses: direct C ABI through `dlopen`/platform library loading.
 
 Not native FFI, but still useful comparisons:
@@ -52,6 +53,7 @@ Not native FFI, but still useful comparisons:
 - Dioxus: Rust UI can use `rust-engine` directly.
 - Leptos: Rust UI/WASM path uses Rust-owned state but not native C FFI.
 - WASM worker: Rust compiles to WebAssembly in a worker; main thread renders frames via transferable `ArrayBuffer` or `SharedArrayBuffer`.
+- Electron WASM: Electron renderer owns the HTML/canvas window while a Node `worker_threads` worker runs the Rust/WASM engine and sends frame buffers.
 - V8/Blink: lower-level embedding concept; target is Rust/shared memory into V8, Blink renders via GPU.
 
 End users should not install Unity or Unreal editors. They should receive a packaged app/game that bundles the engine runtime and the Rust dynamic library. Editors are only needed for development/build machines.
@@ -105,6 +107,21 @@ WASM:
 - Frame decoding was fixed for the current header layout.
 - Uses transferable buffers and/or `SharedArrayBuffer`.
 - Next: validate both transfer and shared modes in browser, not only node perf.
+
+Electron WASM:
+
+- Target folder: `electron-wasm/`.
+- Rust compiles to WASM using the existing `wasm/` crate.
+- Engine runs in a Node worker.
+- Electron renderer thread receives frame buffers and draws the globe on canvas.
+- Next: verify window/control behavior and add perf logging for worker tick, transfer/read, and canvas draw.
+
+Electron ABI:
+
+- Target folder: `electron-abi/`.
+- Electron renderer calls a Node-API native addon.
+- Addon loads `librust_engine.dylib`, sends input into Rust through the C ABI, ticks Rust, receives the Rust callback state, and returns a flat `ArrayBuffer`.
+- Next: verify window/control behavior and add perf logging for addon call, Rust tick/callback, buffer copy, and canvas draw.
 
 Dioxus:
 
@@ -219,6 +236,8 @@ Targets to measure in series:
 - `leptos-render`
 - `wasm-worker-transfer`
 - `wasm-worker-shared`
+- `electron-wasm-transfer`
+- `electron-abi`
 - `v8-blink-concept`
 - `unreal-render`
 - `cryengine-render`
@@ -261,12 +280,14 @@ For WASM:
 2. Update Unity README to mention installed version, build script, bundled shaders, and standalone player path.
 3. Update `scripts/perf_series.sh` so Unity is no longer skipped.
 4. Add a Unity perf/smoke launch mode that exits automatically after `PERF_FRAMES`.
-5. Install Unreal Engine.
-6. Build/open the Unreal project.
-7. Fix Unreal rendering parity and package `Rust Unreal Renderer`.
-8. Add Unreal to the serial UI launch flow.
-9. Add Unreal to the serial perf flow.
-10. Re-run the full UI sequence and perf sequence.
+5. Add Electron WASM and Electron ABI to the serial UI launch flow.
+6. Add Electron WASM and Electron ABI to the serial perf flow.
+7. Install Unreal Engine.
+8. Build/open the Unreal project.
+9. Fix Unreal rendering parity and package `Rust Unreal Renderer`.
+10. Add Unreal to the serial UI launch flow.
+11. Add Unreal to the serial perf flow.
+12. Re-run the full UI sequence and perf sequence.
 
 ## Open Questions
 
@@ -281,6 +302,7 @@ For WASM:
 This POC is complete when:
 
 - Unity, Unreal, Godot, Qt, Browser FFI, Tauri, WASM, Dioxus, and Leptos can render the same Rust-owned globe state.
+- Electron WASM and Electron ABI both render the same Rust-owned globe state.
 - Unreal has a working standalone player comparable to Unity.
 - All supported local targets can be launched one by one.
 - Controls go to Rust before the UI renders.

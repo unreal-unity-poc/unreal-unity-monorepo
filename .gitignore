@@ -17,6 +17,9 @@
 /tauri/node_modules/
 /tauri/dist/
 /tauri/src-tauri/target/
+/electron-wasm/node_modules/
+/electron-abi/node_modules/
+/electron-abi/native/rust_engine_addon.node
 /cef/build/
 /webview2/build/
 /dioxus/target/

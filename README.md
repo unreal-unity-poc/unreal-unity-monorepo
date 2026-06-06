@@ -23,6 +23,8 @@ This repo is a proof of concept for a same-process Rust to Unity architecture:
 - `dioxus/` is the Dioxus Rust UI renderer comparison.
 - `leptos/` is the Leptos Rust UI renderer comparison.
 - `wasm/` is the direct Rust WebAssembly plus JavaScript shared linear memory comparison.
+- `electron-wasm/` is an Electron renderer using Rust-generated WASM in a Node worker.
+- `electron-abi/` is an Electron renderer using a Node-API addon that calls the Rust C ABI.
 - `v8-blink/` is the lower-level V8/Blink embedding comparison.
 - `browserffi/` is a native WebKit browser window driven through the Rust C ABI.
 - `scripts/build_native_plugin.sh` builds the Rust dynamic library and copies it into each renderer's native library folder.
@@ -117,5 +119,7 @@ The goal is to compare renderer integrations while keeping Rust as the authorita
 - Dioxus: Rust UI uses `rust-engine` directly and renders the state in a desktop webview.
 - Leptos: Rust UI uses `rust-engine` directly and renders the same state in the browser/WASM path.
 - WASM: Rust simulation compiles to WebAssembly and JavaScript reads entity structs from WASM linear memory.
+- Electron WASM: Electron renderer draws HTML/canvas while a Node worker runs the Rust/WASM engine and sends frame buffers.
+- Electron ABI: Electron renderer draws HTML/canvas while a Node-API native addon calls the Rust C ABI in-process.
 - V8/Blink: native host embeds browser-engine pieces, shares native/WASM-style memory into V8, lets Blink/GPU render.
 - Browser FFI: native host captures controls, calls Rust through FFI, and renders returned state in an HTML canvas.
