@@ -1,6 +1,7 @@
 # Rust Unity Unreal POC
 
-This repo is a proof of concept for a same-process Rust to Unity architecture:
+This repo is a proof of concept for a shared Rust simulation rendered by game
+engines and UI hosts:
 
 - Rust owns simulation state.
 - Renderers send input intent to Rust first.
@@ -14,7 +15,14 @@ This repo is a proof of concept for a same-process Rust to Unity architecture:
 - `rust-engine/` is a Rust `cdylib` that exports the engine FFI.
 - `unity/` is the Unity renderer project.
 - `godot/` is the Godot renderer project.
-- `unreal/` is reserved for the Unreal renderer comparison.
+- `unreal/` is the Unreal renderer comparison.
+- `o3de/` is reserved for the Open 3D Engine C++ Gem comparison.
+- `flax/` is reserved for the Flax native/C# scripting comparison.
+- `stride/` is reserved for the Stride C# renderer comparison.
+- `monogame/` is reserved for the MonoGame C# renderer comparison.
+- `bevy/` is reserved for the Bevy Rust-native renderer comparison.
+- `defold/` is reserved for the Defold native-extension renderer comparison.
+- `cocos2d-x/` is reserved for the Cocos2d-x C++ renderer comparison.
 - `qt/` is reserved for the Qt renderer comparison.
 - `cryengine/` is reserved for the CryEngine renderer comparison.
 - `tauri/` is the Tauri webview renderer comparison.
@@ -111,6 +119,13 @@ The goal is to compare renderer integrations while keeping Rust as the authorita
 - Unity: C# P/Invoke into the Rust dynamic library.
 - Godot: C# P/Invoke into the Rust dynamic library.
 - Unreal: native C++ module/plugin calling the same Rust dynamic library.
+- O3DE: native C++ Gem calling the same Rust dynamic library.
+- Flax: native C++ script/module or C# script calling the same Rust dynamic library.
+- Stride: C# script calling the same Rust dynamic library.
+- MonoGame: C# game loop calling the same Rust dynamic library.
+- Bevy: Rust engine target using `rust-engine` directly, with optional C ABI mode for comparison.
+- Defold: native extension calling the same Rust dynamic library and exposing state to Lua/render scripts.
+- Cocos2d-x: native C++ scene/layer calling the same Rust dynamic library.
 - Qt: C++ Qt app calling the same Rust dynamic library.
 - CryEngine: native C++ entity component calling the same Rust dynamic library.
 - Tauri: Rust backend uses `rust-engine` directly, then serializes state into a webview canvas.

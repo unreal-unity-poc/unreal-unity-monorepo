@@ -94,6 +94,13 @@ run_target "v8-blink-concept" ./v8-blink/build/rust_v8_blink_concept
 skip_target "unity-render" "Unity Hub installed, but Unity Editor download previously aborted; no headless Unity Player/Editor perf run available."
 skip_target "godot-render" "Godot C# project builds, but this series does not launch the Godot editor/player headlessly yet."
 skip_target "unreal-render" "Unreal Engine editor/runtime is not installed on this Mac; plugin scaffold only."
+skip_target "o3de-render" "O3DE project/Gem scaffold is documented, but no local O3DE editor/runtime automation exists yet."
+skip_target "flax-render" "Flax renderer scaffold is documented, but no local Flax editor/runtime automation exists yet."
+skip_target "stride-render" "Stride renderer scaffold is documented, but no local Stride project/runtime automation exists yet."
+skip_target "monogame-render" "MonoGame renderer scaffold is documented, but no local MonoGame project/runtime automation exists yet."
+skip_target "bevy-render" "Bevy renderer scaffold is documented, but no local Bevy app/perf harness exists yet."
+skip_target "defold-render" "Defold renderer scaffold is documented, but no local Defold project/native-extension automation exists yet."
+skip_target "cocos2dx-render" "Cocos2d-x renderer scaffold is documented, but no local Cocos2d-x project/runtime automation exists yet."
 skip_target "cryengine-render" "CryEngine editor/runtime is not available on this Mac; component scaffold only."
 skip_target "webview2-render" "WebView2 is Windows-only and cannot run on this Mac."
 skip_target "tauri-render" "Tauri renderer scaffold exists, but npm/Tauri runtime perf automation is not installed in this series."
@@ -104,4 +111,3 @@ log_event "series" "summary" "\"log\":$(json_escape "$LOG"),\"build_log\":$(json
 log_event "series" "end" "\"frames\":$FRAMES"
 
 echo "done: $LOG"
-

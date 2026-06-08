@@ -39,6 +39,12 @@ True same-process native FFI:
 - Unity: C# P/Invoke into `librust_engine.dylib`.
 - Unreal Engine: C++ plugin loads/calls Rust C ABI directly.
 - Godot C#: C# P/Invoke into `librust_engine.dylib`.
+- O3DE: C++ Gem loads/calls Rust C ABI directly.
+- Flax: C++ script/module loads/calls Rust C ABI directly; C# P/Invoke path can be a managed comparison.
+- Stride: C# script loads/calls Rust C ABI through P/Invoke.
+- MonoGame: C# game loop loads/calls Rust C ABI through P/Invoke.
+- Defold: native extension loads/calls Rust C ABI, then exposes compact state to Lua/render scripts.
+- Cocos2d-x: C++ scene/layer loads/calls Rust C ABI directly.
 - Qt: C++/Qt loads/calls Rust C ABI directly.
 - CryEngine: C++ entity component loads/calls Rust C ABI directly.
 - CEF host: native C++ bridge calls Rust C ABI, then forwards state into Chromium.
@@ -49,6 +55,7 @@ True same-process native FFI:
 
 Not native FFI, but still useful comparisons:
 
+- Bevy: Rust-native engine target can use `rust-engine` directly, avoiding the C ABI unless an optional comparison mode is added.
 - Tauri: Rust backend can use `rust-engine` directly and send state into the webview.
 - Dioxus: Rust UI can use `rust-engine` directly.
 - Leptos: Rust UI/WASM path uses Rust-owned state but not native C FFI.
@@ -57,6 +64,26 @@ Not native FFI, but still useful comparisons:
 - V8/Blink: lower-level embedding concept; target is Rust/shared memory into V8, Blink renders via GPU.
 
 End users should not install Unity or Unreal editors. They should receive a packaged app/game that bundles the engine runtime and the Rust dynamic library. Editors are only needed for development/build machines.
+
+## Additional Game Engine Fit
+
+Good first-wave additions:
+
+- O3DE: open-source, native C++ Gem model, strong apples-to-apples comparison with Unreal and CryEngine.
+- Flax: supports C++ and C# scripting, useful for both native and managed Rust ABI paths.
+- Stride: open-source C# engine, useful managed comparison against Unity and Godot C#.
+- MonoGame: lightweight C# game framework, useful to isolate managed P/Invoke and draw-loop overhead without editor cost.
+- Bevy: Rust-native ECS/game engine, useful baseline for direct Rust integration.
+- Defold: native extensions can bridge Rust ABI into a Lua/render-script game engine.
+- Cocos2d-x: native C++ engine, useful lightweight game-loop comparison.
+
+Deferred or lower-fit additions:
+
+- GameMaker: native extensions exist, but rendering/runtime parity and export constraints make it a second-wave target.
+- Love2D: LuaJIT FFI is interesting, but the target is 2D-first and less comparable to the globe/atmosphere renderer.
+- Phaser, PlayCanvas, Babylon.js, Construct, and GDevelop: better covered by the existing WASM/browser/electron paths unless a web-game-engine-specific comparison becomes important.
+- Ren'Py and RPG Maker: useful for narrative/tooling comparisons, but not a good match for per-frame native globe rendering.
+- Source/Source 2, Roblox, and proprietary console SDK engines: not practical as repository targets without licensed SDK/runtime access.
 
 ## Current Status
 
@@ -159,6 +186,48 @@ CryEngine:
 - Current macOS machine may not be a realistic CryEngine runtime target.
 - Next: verify supported platform/toolchain, then build the native component around the same Rust ABI.
 
+O3DE:
+
+- Target folder: `o3de/`.
+- Planned path is a native C++ runtime Gem that loads the Rust ABI and updates entities/materials.
+- Next: create Gem skeleton, add library staging conventions, and verify editor/runtime availability.
+
+Flax:
+
+- Target folder: `flax/`.
+- Planned path is native C++ scripting first, with optional C# P/Invoke comparison.
+- Next: create project/script skeleton and decide whether C++ or C# owns the first renderer.
+
+Stride:
+
+- Target folder: `stride/`.
+- Planned path is C# scripting with P/Invoke into the Rust dynamic library.
+- Next: create Stride project skeleton and share managed ABI bindings with Unity/Godot where possible.
+
+MonoGame:
+
+- Target folder: `monogame/`.
+- Planned path is a compact C# game loop with P/Invoke into the Rust dynamic library.
+- Next: create a minimal app and perf harness to isolate managed boundary and draw-loop costs.
+
+Bevy:
+
+- Target folder: `bevy/`.
+- Planned path is direct use of the `rust-engine` crate through Bevy systems/resources.
+- Next: create a Bevy app that renders the same globe state, then optionally add a C ABI mode.
+
+Defold:
+
+- Target folder: `defold/`.
+- Planned path is a native extension that calls the Rust ABI and exposes compact state to Lua/render scripts.
+- Next: create project/extension skeleton and decide projected-globe versus 3D renderer scope.
+
+Cocos2d-x:
+
+- Target folder: `cocos2d-x/`.
+- Planned path is native C++ scene/layer code calling the Rust ABI.
+- Next: create project skeleton and start with a projected globe before deeper 3D rendering.
+
 Unreal Engine:
 
 - Plugin scaffold exists in `unreal/Plugins/RustEngine`.
@@ -231,6 +300,13 @@ Targets to measure in series:
 - `cef-bridge`
 - `unity-render`
 - `godot-render`
+- `o3de-render`
+- `flax-render`
+- `stride-render`
+- `monogame-render`
+- `bevy-render`
+- `defold-render`
+- `cocos2dx-render`
 - `tauri-render`
 - `dioxus-render`
 - `leptos-render`
@@ -287,7 +363,8 @@ For WASM:
 9. Fix Unreal rendering parity and package `Rust Unreal Renderer`.
 10. Add Unreal to the serial UI launch flow.
 11. Add Unreal to the serial perf flow.
-12. Re-run the full UI sequence and perf sequence.
+12. Pick the next game-engine scaffold to turn into a runnable target: O3DE, Flax, Stride, MonoGame, Bevy, Defold, or Cocos2d-x.
+13. Re-run the full UI sequence and perf sequence.
 
 ## Open Questions
 
@@ -295,6 +372,7 @@ For WASM:
 - Should the comparison optimize for lowest-latency native state transfer, or for realistic production ergonomics per framework?
 - Should the globe renderer stay deliberately simple, or should we add texture/lighting/detail once every target reaches parity?
 - Which platform should own WebView2 and CryEngine validation if macOS cannot run them fully?
+- Should C# game-engine targets share one managed ABI binding package, or keep bindings local for easier project portability?
 - Do we want a single launcher script that opens each renderer, waits for window close, then starts the next?
 
 ## Definition Of Done
@@ -304,6 +382,7 @@ This POC is complete when:
 - Unity, Unreal, Godot, Qt, Browser FFI, Tauri, WASM, Dioxus, and Leptos can render the same Rust-owned globe state.
 - Electron WASM and Electron ABI both render the same Rust-owned globe state.
 - Unreal has a working standalone player comparable to Unity.
+- Additional game-engine targets are either implemented or explicitly documented as deferred/scaffolded.
 - All supported local targets can be launched one by one.
 - Controls go to Rust before the UI renders.
 - Native FFI targets use bidirectional callbacks.
