@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+  RUSTDOCFLAGS: -Dwarnings
+
+jobs:
+  rust-engine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.85.0 --profile minimal --component rustfmt,clippy
+      - name: Check formatting
+        run: cargo +1.85.0 fmt --all -- --check
+      - name: Lint all targets
+        run: cargo +1.85.0 clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test all targets
+        run: cargo +1.85.0 test --workspace --all-targets --locked
+      - name: Build release library
+        run: cargo +1.85.0 build --workspace --release --locked
+      - name: Build documentation
+        run: cargo +1.85.0 doc --workspace --no-deps --locked
