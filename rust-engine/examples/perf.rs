@@ -61,7 +61,8 @@ fn summary_json(samples: &[Duration]) -> String {
     let mut nanos: Vec<u128> = samples.iter().map(Duration::as_nanos).collect();
     nanos.sort_unstable();
     let total: u128 = nanos.iter().sum();
-    let avg = total / u128::from(nanos.len().max(1));
+    let sample_count = u64::try_from(nanos.len().max(1)).unwrap_or(u64::MAX);
+    let avg = total / u128::from(sample_count);
     let p50 = percentile(&nanos, 50, 100);
     let p95 = percentile(&nanos, 95, 100);
     let max = nanos.last().copied().unwrap_or_default();
