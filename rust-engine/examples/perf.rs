@@ -12,28 +12,28 @@ fn main() {
     let mut engine = Engine::new();
     let mut samples = Vec::with_capacity(frames);
 
-    log_event(target, "start", None, &format!("\"frames\":{}", frames));
+    log_event(target, "start", None, &format!("\"frames\":{frames}"));
 
     for frame in 0..frames {
         let input = input_for_frame(frame);
         let started = Instant::now();
         engine.set_input(input);
-        engine.tick(1.0 / 60.0);
+        let event = engine.tick(1.0 / 60.0);
         let elapsed = started.elapsed();
         samples.push(elapsed);
 
-        let state = engine.render_state();
+        let state = event.state;
+        let tick_ns = elapsed.as_nanos();
+        let camera_distance = state.camera_distance;
+        let rotation_x = state.rotation_x;
+        let rotation_y = state.rotation_y;
+        let patch_count = engine.surface_patches().len();
         log_event(
             target,
             "frame",
             Some(frame),
             &format!(
-                "\"tick_ns\":{},\"camera_distance\":{},\"rotation_x\":{},\"rotation_y\":{},\"patch_count\":{}",
-                elapsed.as_nanos(),
-                state.camera_distance,
-                state.rotation_x,
-                state.rotation_y,
-                engine.surface_patches().len()
+                "\"tick_ns\":{tick_ns},\"camera_distance\":{camera_distance},\"rotation_x\":{rotation_x},\"rotation_y\":{rotation_y},\"patch_count\":{patch_count}"
             ),
         );
     }
@@ -61,41 +61,36 @@ fn summary_json(samples: &[Duration]) -> String {
     let mut nanos: Vec<u128> = samples.iter().map(Duration::as_nanos).collect();
     nanos.sort_unstable();
     let total: u128 = nanos.iter().sum();
-    let avg = total as f64 / nanos.len().max(1) as f64;
-    let p50 = percentile(&nanos, 0.50);
-    let p95 = percentile(&nanos, 0.95);
+    let sample_count = u64::try_from(nanos.len().max(1)).unwrap_or(u64::MAX);
+    let avg = total / u128::from(sample_count);
+    let p50 = percentile(&nanos, 50, 100);
+    let p95 = percentile(&nanos, 95, 100);
     let max = nanos.last().copied().unwrap_or_default();
+    let frames = samples.len();
 
     format!(
-        "\"frames\":{},\"avg_ns\":{},\"p50_ns\":{},\"p95_ns\":{},\"max_ns\":{}",
-        samples.len(),
-        avg,
-        p50,
-        p95,
-        max
+        "\"frames\":{frames},\"avg_ns\":{avg},\"p50_ns\":{p50},\"p95_ns\":{p95},\"max_ns\":{max}"
     )
 }
 
-fn percentile(sorted: &[u128], p: f64) -> u128 {
-    if sorted.is_empty() {
+fn percentile(sorted: &[u128], numerator: usize, denominator: usize) -> u128 {
+    if sorted.is_empty() || denominator == 0 {
         return 0;
     }
 
-    let index = ((sorted.len() - 1) as f64 * p).round() as usize;
-    sorted[index]
+    let last_index = sorted.len() - 1;
+    let scaled = last_index.saturating_mul(numerator);
+    let index = scaled.saturating_add(denominator / 2) / denominator;
+    sorted[index.min(last_index)]
 }
 
 fn log_event(target: &str, phase: &str, frame: Option<usize>, fields: &str) {
     let frame_field = frame
-        .map(|frame| format!(",\"frame\":{}", frame))
+        .map(|frame| format!(",\"frame\":{frame}"))
         .unwrap_or_default();
+    let timestamp = now_ms();
     println!(
-        "{{\"ts_unix_ms\":{},\"target\":\"{}\",\"phase\":\"{}\"{} ,{}}}",
-        now_ms(),
-        target,
-        phase,
-        frame_field,
-        fields
+        "{{\"ts_unix_ms\":{timestamp},\"target\":\"{target}\",\"phase\":\"{phase}\"{frame_field},{fields}}}"
     );
 }
 
