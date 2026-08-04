@@ -509,7 +509,10 @@ mod tests {
         ] {
             assert!(value.is_finite());
         }
-        assert_eq!(event.state.rotation_x, EarthRenderState::default().rotation_x);
+        assert_eq!(
+            event.state.rotation_x,
+            EarthRenderState::default().rotation_x
+        );
     }
 
     #[test]
