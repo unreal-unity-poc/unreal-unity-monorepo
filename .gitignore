@@ -38,3 +38,7 @@
 *.pdb
 *.opendb
 *.VC.db
+tmp
+temp
+tmp/worktrees
+temp/worktrees
