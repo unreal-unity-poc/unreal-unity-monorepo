@@ -7,9 +7,19 @@
   "scripts": {
     "build:addon": "node scripts/build-addon.mjs",
     "build:rust": "../scripts/build_native_plugin.sh",
-    "start": "npm run build:rust && npm run build:addon && electron ."
+    "start": "npm run build:rust && npm run build:addon && electron .",
+    "lint:ores": "if [ -f .ores-lint/lint.sh ]; then sh .ores-lint/lint.sh; else echo 'ores-lint not installed'; fi",
+    "prepublishOnly": "npm run lint:ores"
   },
   "devDependencies": {
     "electron": "42.3.3"
+  },
+  "oresLint": {
+    "note": "Declared, not installed. ores-lint resolves these from a global install - see .ores-lint/README.md",
+    "requires": {
+      "eslint": ">=9",
+      "typescript-eslint": ">=8 (optional; without it .ts files are skipped)"
+    },
+    "install": "npm i -g eslint typescript-eslint"
   }
 }
